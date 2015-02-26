@@ -109,8 +109,13 @@ class CalendarWindow(object):
         """Update the calendar event list for the selected day."""
         year, month, day = calendar.get_date()
         event_list.clear()
-        for event in self.calendar_events[year][month][day]:
-            event_list.append([event])
+
+        # get(day) used instead of [day] because we use defaultdict
+        # and it would create a new element.
+        events = self.calendar_events[year][month].get(day)
+        if events:
+            for event in events:
+                event_list.append([event])
 
     def destroy(self, widget, event):
         """Destroy this window on Gtk event."""
