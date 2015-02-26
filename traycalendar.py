@@ -7,6 +7,12 @@ from os import getenv
 
 from gi.repository import Gtk, Gdk
 
+
+ORG_DIRECTORY = getenv('HOME') + '/org/'
+ORG_GLOB = '*.org'
+ORG_ARCHIVE_SUFFIX = '_archive.org'
+
+
 def scan_org_for_events():
     """Search the org files for the calendar events"""
 
@@ -20,8 +26,8 @@ def scan_org_for_events():
         return list()
 
     events = year_dict()
-    for filename in glob.iglob(getenv('HOME') + '/org/*.org'):
-        if filename.endswith('_archive.org'):
+    for filename in glob.iglob(ORG_DIRECTORY + '/' + ORG_GLOB):
+        if filename.endswith(ORG_ARCHIVE_SUFFIX):
             continue
         with open(filename, "r") as filehandle:
             last_heading = None
