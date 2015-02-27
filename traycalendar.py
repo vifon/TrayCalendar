@@ -72,11 +72,13 @@ class CalendarWindow(object):
         self.window.set_decorated(False)
         self.window.set_gravity(Gdk.Gravity.STATIC)
 
+        window_width = 300
+
         # Set the window geometry.
         geometry = Gdk.Geometry()
-        geometry.min_width = 300
-        geometry.max_width = 300
-        geometry.base_width = 300
+        geometry.min_width = window_width
+        geometry.max_width = window_width
+        geometry.base_width = window_width
         self.window.set_geometry_hints(
             None, geometry,
             Gdk.WindowHints.MIN_SIZE |
@@ -87,7 +89,7 @@ class CalendarWindow(object):
         list_model = Gtk.ListStore(str)
         list_view = Gtk.TreeView(list_model)
         list_column = Gtk.TreeViewColumn("Events", Gtk.CellRendererText(), text=0)
-        list_column.set_fixed_width(300)
+        list_column.set_fixed_width(window_width)
         list_view.append_column(list_column)
 
         # Create the calendar widget.
@@ -104,11 +106,12 @@ class CalendarWindow(object):
 
         self.window.add(vbox)
 
-        # deprecated and hack FIXME
-        # Show the window right beside the cursor.
         rootwin = self.window.get_screen().get_root_window()
+        # get_pointer is deprecated but using Gdk.Device.get_position
+        # is not viable here: we have no access to the pointing device.
         screen, x, y, mask = rootwin.get_pointer()
-        x -= 300
+        x -= window_width
+        # Show the window right beside the cursor.
         self.window.move(x,y)
 
         self.window.show_all()
