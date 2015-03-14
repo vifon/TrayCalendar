@@ -31,7 +31,16 @@ ORG_ARCHIVE_SUFFIX = '_archive.org'
 
 
 def scan_org_for_events():
-    """Search the org files for the calendar events"""
+    """Search the org files for the calendar events.
+
+    Scans the ~/org/ directory for the .org files and saves the events
+    found there into a multilevel dict of lists: events[year][month][day]
+
+    The returned dict uses defaultdict so *do not* rely on the
+    KeyError exception etc.! Check if the element exists with
+    .get(key) before accessing it!
+
+    """
 
     def year_dict():
         return defaultdict(month_dict)
