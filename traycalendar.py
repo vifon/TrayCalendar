@@ -63,7 +63,7 @@ def scan_org_for_events():
                     last_heading = heading_match.group(1)
                     # strip the tags
                     last_heading = re.sub(r'\s*\S*$', last_heading, '')
-                match = re.search(r'<(\d{4})-(\d{2})-(\d{2}) \w+.*?>', line)
+                match = re.search(r'<(\d{4})-(\d{2})-(\d{2}).*?>', line)
                 if match:
                     year, month, day = [ int(field) for field in match.group(1,2,3) ]
                     month -= 1      # months are indexed from 0 in Gtk.Calendar
