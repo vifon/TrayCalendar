@@ -75,8 +75,6 @@ class CalendarWindow(object):
     def __init__(self):
         self.window = Gtk.Window()
 
-        self.window.connect('focus-out-event', self.destroy)
-
         self.window.set_resizable(False)
         self.window.set_decorated(False)
         self.window.set_gravity(Gdk.Gravity.STATIC)
@@ -145,10 +143,6 @@ class CalendarWindow(object):
         if events:
             for event in events:
                 event_list.append([event])
-
-    def destroy(self, widget, event):
-        """Destroy this window on Gtk event."""
-        self.window.destroy()
 
 
 def on_left_click(event):
