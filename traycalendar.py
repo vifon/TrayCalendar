@@ -22,6 +22,8 @@ import re
 from collections import defaultdict
 from os import getenv
 
+import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
