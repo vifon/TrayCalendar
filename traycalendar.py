@@ -18,6 +18,7 @@
 
 
 import glob
+import os.path
 import re
 from collections import defaultdict
 from os import getenv
@@ -27,15 +28,15 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
-ORG_DIRECTORY = getenv('HOME') + '/org/'
+DEFAULT_ORG_DIRECTORY = os.path.join(getenv('HOME'), "org")
 ORG_GLOB = '*.org'
 ORG_ARCHIVE_SUFFIX = '_archive.org'
 
 
-def scan_org_for_events():
+def scan_org_for_events(org_directories):
     """Search the org files for the calendar events.
 
-    Scans the ~/org/ directory for the .org files and saves the events
+    Scans the passed directories for the .org files and saves the events
     found there into a multilevel dict of lists: events[year][month][day]
 
     The returned dict uses defaultdict so *do not* rely on the
@@ -54,27 +55,28 @@ def scan_org_for_events():
         return list()
 
     events = year_dict()
-    for filename in glob.iglob(ORG_DIRECTORY + '/' + ORG_GLOB):
-        if filename.endswith(ORG_ARCHIVE_SUFFIX):
-            continue
-        with open(filename, "r") as filehandle:
-            last_heading = None
-            for line in filehandle:
-                heading_match = re.search(r'^\*+\s+(.*)', line)
-                if heading_match:
-                    last_heading = heading_match.group(1)
-                    # strip the tags
-                    last_heading = re.sub(r'\s*\S*$', last_heading, '')
-                match = re.search(r'<(\d{4})-(\d{2})-(\d{2}).*?>', line)
-                if match:
-                    year, month, day = [ int(field) for field in match.group(1,2,3) ]
-                    month -= 1      # months are indexed from 0 in Gtk.Calendar
-                    events[year][month][day].append(last_heading)
+    for org_directory in org_directories:
+        for filename in glob.iglob(os.path.join(org_directory, ORG_GLOB)):
+            if filename.endswith(ORG_ARCHIVE_SUFFIX):
+                continue
+            with open(filename, "r") as filehandle:
+                last_heading = None
+                for line in filehandle:
+                    heading_match = re.search(r'^\*+\s+(.*)', line)
+                    if heading_match:
+                        last_heading = heading_match.group(1)
+                        # strip the tags
+                        last_heading = re.sub(r'\s*\S*$', last_heading, '')
+                    match = re.search(r'<(\d{4})-(\d{2})-(\d{2}).*?>', line)
+                    if match:
+                        year, month, day = [ int(field) for field in match.group(1,2,3) ]
+                        month -= 1      # months are indexed from 0 in Gtk.Calendar
+                        events[year][month][day].append(last_heading)
     return events
 
 class CalendarWindow(object):
 
-    def __init__(self):
+    def __init__(self, org_directories):
         self.window = Gtk.Window()
         self.window.set_wmclass("traycalendar", "TrayCalendar")
 
@@ -104,7 +106,7 @@ class CalendarWindow(object):
 
         # Create the calendar widget.
         calendar = Gtk.Calendar()
-        self.calendar_events = scan_org_for_events()
+        self.calendar_events = scan_org_for_events(org_directories)
         calendar.connect('month-changed', self.mark_calendar_events)
         calendar.connect('day-selected', self.display_event_list, list_model)
         self.mark_calendar_events(calendar)
@@ -152,9 +154,9 @@ class CalendarWindow(object):
                 event_list.append([event])
 
 
-def tray_mode():
+def tray_mode(org_directories):
     def on_left_click(event):
-        window = CalendarWindow()
+        window = CalendarWindow(org_directories)
     def on_right_click(button, time, data):
         Gtk.main_quit()
     statusicon = Gtk.StatusIcon()
@@ -163,20 +165,34 @@ def tray_mode():
     statusicon.connect('popup-menu', on_right_click)
     Gtk.main()
 
-def window_mode():
-    window = CalendarWindow()
+def window_mode(org_directories):
+    window = CalendarWindow(org_directories)
     window.window.connect('destroy', Gtk.main_quit)
     Gtk.main()
 
 def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no-tray", action='store_true')
+    parser.add_argument(
+        "--no-tray",
+        help="Show the calendar windows immediately and quit after it's closed.",
+        action='store_true',
+    )
+    parser.add_argument(
+        "--org-directory", "-d",
+        help="Directories to search for *.org; default: ~/org/.",
+        action='append',
+        dest='org_directories',
+    )
     args = parser.parse_args()
+
+    if not args.org_directories:
+        args.org_directories = [DEFAULT_ORG_DIRECTORY]
+
     if args.no_tray:
-        window_mode()
+        window_mode(args.org_directories)
     else:
-        tray_mode()
+        tray_mode(args.org_directories)
 
 if __name__ == "__main__":
     from sys import argv
