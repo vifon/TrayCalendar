@@ -76,6 +76,7 @@ class CalendarWindow(object):
 
     def __init__(self):
         self.window = Gtk.Window()
+        self.window.set_wmclass("traycalendar", "TrayCalendar")
 
         self.window.set_resizable(False)
         self.window.set_decorated(False)
@@ -109,7 +110,11 @@ class CalendarWindow(object):
         self.mark_calendar_events(calendar)
         self.display_event_list(calendar, list_model)
 
+        close_button = Gtk.Button("Close")
+        close_button.connect('clicked', lambda event: self.window.destroy())
+
         vbox = Gtk.VBox()
+        vbox.add(close_button)
         vbox.add(calendar)
         vbox.add(list_view)
 
@@ -147,18 +152,31 @@ class CalendarWindow(object):
                 event_list.append([event])
 
 
-def on_left_click(event):
-    window = CalendarWindow()
-
-def on_right_click(button, time, data):
-    Gtk.main_quit()
-
-def main(argv=None):
+def tray_mode():
+    def on_left_click(event):
+        window = CalendarWindow()
+    def on_right_click(button, time, data):
+        Gtk.main_quit()
     statusicon = Gtk.StatusIcon()
     statusicon.set_from_icon_name('x-office-calendar')
     statusicon.connect('activate', on_left_click)
     statusicon.connect('popup-menu', on_right_click)
     Gtk.main()
+
+def window_mode():
+    window = CalendarWindow()
+    window.window.connect('destroy', Gtk.main_quit)
+    Gtk.main()
+
+def main(argv=None):
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-tray", action='store_true')
+    args = parser.parse_args()
+    if args.no_tray:
+        window_mode()
+    else:
+        tray_mode()
 
 if __name__ == "__main__":
     from sys import argv
