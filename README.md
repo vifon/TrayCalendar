@@ -5,15 +5,26 @@ TrayCalendar is a minimal popup calendar designed to work in
 environments that lack an easy access to a calendar, like i3wm, XMonad
 or Awesome.
 
-It is capable of reading the Emacs org-mode files from `~/org/`
-(currently hardcoded) and displaying the events found in them.
+It is capable of reading the Emacs org-mode files (by default from
+`~/org/*.org`) and displaying the events found in them.
 
 To display the calendar, left-click on its tray icon. Right-click to
 close TrayCalendar completely.
 
-**Keep in mind that TrayCalendar is still in a very early stage of
-development.** It probably won't work correctly when the system tray
-is not located in the upper right corner of the screen.
+For now TrayCalendar assumes the system tray is located in the upper
+right corner of the screen.
+
+The calendar window should be ignored by the window manager. In XMonad it can be achieved by adding the following rule to `manageHook`:
+
+```haskell
+className =? "TrayCalendar" --> doIgnore
+```
+
+Suggested configuration for `xmobar` as the clock:
+
+```
+<action=`traycalendar --no-tray &> /dev/null`><action=`traycalendar &> /dev/null` button=3>%date%</action></action>
+```
 
 DEPENDENCIES
 ------------
@@ -29,7 +40,7 @@ Wojciech 'vifon' Siewierski \<wojciech dot siewierski at onet dot pl\>
 COPYRIGHT
 ---------
 
-Copyright (C) 2015  Wojciech Siewierski
+Copyright (C) 2015-2018  Wojciech Siewierski
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
