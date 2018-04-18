@@ -1,6 +1,8 @@
 TrayCalendar
 ============
 
+[![](https://raw.githubusercontent.com/Vifon/TrayCalendar/master/examples/screenshot.jpg)](https://raw.githubusercontent.com/Vifon/TrayCalendar/master/examples/screenshot.jpg)
+
 TrayCalendar is a minimal popup calendar designed to work in
 environments that lack an easy access to a calendar, like i3wm, XMonad
 or Awesome.
