@@ -17,6 +17,7 @@
 ########################################################################
 
 
+import functools
 import glob
 import os.path
 import re
@@ -31,6 +32,18 @@ from gi.repository import Gtk, Gdk
 DEFAULT_ORG_DIRECTORY = os.path.join(getenv('HOME'), "org")
 ORG_GLOB = '*.org'
 ORG_ARCHIVE_SUFFIX = '_archive.org'
+
+
+def org_agenda_files(directory):
+    org_abs = functools.partial(os.path.join, directory)
+    agenda_files_path = org_abs('.agenda-files')
+    try:
+        with open(agenda_files_path) as agenda_files:
+            yield from (org_abs(f.rstrip('\n')) for f in agenda_files)
+    except FileNotFoundError:
+        for filename in glob.iglob(os.path.join(directory, ORG_GLOB)):
+            if not filename.endswith(ORG_ARCHIVE_SUFFIX):
+                yield filename
 
 
 def scan_org_for_events(org_directories):
@@ -56,9 +69,7 @@ def scan_org_for_events(org_directories):
 
     events = year_dict()
     for org_directory in org_directories:
-        for filename in glob.iglob(os.path.join(org_directory, ORG_GLOB)):
-            if filename.endswith(ORG_ARCHIVE_SUFFIX):
-                continue
+        for filename in org_agenda_files(org_directory):
             with open(filename, "r") as filehandle:
                 last_heading = None
                 for line in filehandle:
