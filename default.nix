@@ -1,6 +1,5 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ stdenv, python3, gtk3, gobject-introspection, wrapGAppsHook, ... }:
 
-with pkgs;
 stdenv.mkDerivation rec {
   pname = "TrayCalendar";
   version = "0.9";
