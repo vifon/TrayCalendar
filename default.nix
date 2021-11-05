@@ -1,4 +1,4 @@
-{ stdenv, python3, gtk3, gobject-introspection, wrapGAppsHook, ... }:
+{ stdenv, python3, gtk3, gobject-introspection, wrapGAppsHook, makeWrapper, ... }:
 
 stdenv.mkDerivation rec {
   pname = "TrayCalendar";
@@ -11,9 +11,14 @@ stdenv.mkDerivation rec {
     ]))
     gtk3
     gobject-introspection
+    makeWrapper
   ];
   nativeBuildInputs = [ wrapGAppsHook ];
 
   dontUnpack = true;
-  installPhase = "install -m755 -D $src $out/bin/traycalendar";
+  installPhase = ''
+    install -m755 -D $src $out/bin/traycalendar
+    wrapProgram $out/bin/traycalendar \
+      --set LC_TIME en_GB.UTF-8
+  '';
 }
