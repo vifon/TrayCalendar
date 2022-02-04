@@ -139,24 +139,28 @@ class CalendarWindow(object):
 
         self.window.add(vbox)
 
+        rootwin = self.window.get_screen().get_root_window()
+        # get_pointer is deprecated but using Gdk.Device.get_position
+        # is not viable here: we have no access to the pointing device.
+        screen, x, y, mask = rootwin.get_pointer()
+
         if fixed_pos:
-            self.position_fixed(pos, window_width)
+            self.position_fixed(pos, window_width, x, y)
         else:
             self.window.set_gravity(Gdk.Gravity.STATIC)
-            rootwin = self.window.get_screen().get_root_window()
-            # get_pointer is deprecated but using Gdk.Device.get_position
-            # is not viable here: we have no access to the pointing device.
-            screen, x, y, mask = rootwin.get_pointer()
             x -= window_width
             # Show the window right beside the cursor.
             self.window.move(x,y)
 
         self.window.show_all()
 
-    def position_fixed(self, pos, window_width):
+    def position_fixed(self, pos, window_width, x, y):
         if pos[1] >= 0:
             self.window.set_gravity(Gdk.Gravity.NORTH_EAST)
-            self.window.move(Gdk.Screen.get_default().get_width() - window_width - pos[1], pos[0])
+            # Gdk.Screen.get_width() is deprecated
+            # The preferred method appears to be as follows
+            screen_width = self.window.get_screen().get_display().get_monitor_at_point(x, y).get_geometry().width
+            self.window.move(screen_width - window_width - pos[1], pos[0])
         else:
             self.window.set_gravity(Gdk.Gravity.NORTH_WEST)
             self.window.move(pos[2], pos[0])
