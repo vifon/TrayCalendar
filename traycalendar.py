@@ -28,8 +28,10 @@ from os import getenv
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GLib
 
+WM_CLASS = "TrayCalendar"
+TOGGLE_INSTRUCTION = "TC_DIE"
 
 DEFAULT_ORG_DIRECTORY = os.path.join(getenv('HOME'), "org")
 ORG_GLOB = '*.org'
@@ -89,9 +91,12 @@ def scan_org_for_events(org_directories):
 
 class CalendarWindow(object):
 
-    def __init__(self, org_directories):
+    def __init__(self, org_directories, toggle=False):
+        if (toggle):
+            self.get_lock()
+
         self.window = Gtk.Window()
-        self.window.set_wmclass("traycalendar", "TrayCalendar")
+        self.window.set_wmclass("traycalendar", WM_CLASS)
 
         self.window.set_resizable(False)
         self.window.set_decorated(False)
@@ -145,6 +150,31 @@ class CalendarWindow(object):
 
         self.window.show_all()
 
+    def get_lock(self):
+        self._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+        try:
+            # Bind Socket to fixed adress
+            self._lock_socket.bind('\0' + WM_CLASS)
+            # Attach a listener to glib's event loop
+            GLib.io_add_watch(GLib.IOChannel(self._lock_socket.fileno()), 0, GLib.IOCondition.IN, self.toggle_listener, self._lock_socket)
+        except socket.error:
+            # Since the adress was already taken, connect to it and send the toggle-signal
+            self._lock_socket.connect('\0' + WM_CLASS)
+            self._lock_socket.send(TOGGLE_INSTRUCTION.encode())
+            sys.exit()
+
+    def toggle_listener(self, io, cond, socket):
+        # Listen for data
+        connection = socket.recvfrom(6)
+        instruction = connection[0].decode()
+        # Quit the app upon receiving the toggle-signal
+        if (TOGGLE_INSTRUCTION == instruction):
+            Gtk.main_quit()
+        return True
+
+
+
     def mark_calendar_events(self, calendar):
         """Update the days with calendar events list for the selected month."""
         year, month, day = calendar.get_date()
@@ -178,18 +208,10 @@ def tray_mode(org_directories):
     statusicon.connect('popup-menu', on_right_click)
     Gtk.main()
 
-def window_mode(org_directories):
-    window = CalendarWindow(org_directories)
+def window_mode(org_directories, toggle):
+    window = CalendarWindow(org_directories, toggle)
     window.window.connect('destroy', Gtk.main_quit)
     Gtk.main()
-
-def get_lock_or_exit():
-    get_lock_or_exit._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-
-    try:
-        get_lock_or_exit._lock_socket.bind('\0' + "TrayCalendar")
-    except socket.error:
-        sys.exit()
 
 def main(argv=None):
     import argparse
@@ -200,8 +222,8 @@ def main(argv=None):
         action='store_true',
     )
     parser.add_argument(
-        "--single-instance",
-        help="Allow only one instance of the calendar script",
+        "--toggle",
+        help="When started with this argument, the will quit if another process is started with --toggle",
         action='store_true',
     )
     parser.add_argument(
@@ -215,11 +237,8 @@ def main(argv=None):
     if not args.org_directories:
         args.org_directories = [DEFAULT_ORG_DIRECTORY]
 
-    if args.single_instance:
-        get_lock_or_exit();
-
     if args.no_tray:
-        window_mode(args.org_directories)
+        window_mode(args.org_directories, args.toggle)
     else:
         tray_mode(args.org_directories)
 
