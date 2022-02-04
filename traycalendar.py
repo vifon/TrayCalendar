@@ -21,6 +21,8 @@ import functools
 import glob
 import os.path
 import re
+import sys
+import socket
 from collections import defaultdict
 from os import getenv
 
@@ -181,12 +183,25 @@ def window_mode(org_directories):
     window.window.connect('destroy', Gtk.main_quit)
     Gtk.main()
 
+def get_lock_or_exit():
+    get_lock_or_exit._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+    try:
+        get_lock_or_exit._lock_socket.bind('\0' + "TrayCalendar")
+    except socket.error:
+        sys.exit()
+
 def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--no-tray",
         help="Show the calendar windows immediately and quit after it's closed.",
+        action='store_true',
+    )
+    parser.add_argument(
+        "--single-instance",
+        help="Allow only one instance of the calendar script",
         action='store_true',
     )
     parser.add_argument(
@@ -199,6 +214,9 @@ def main(argv=None):
 
     if not args.org_directories:
         args.org_directories = [DEFAULT_ORG_DIRECTORY]
+
+    if args.single_instance:
+        get_lock_or_exit();
 
     if args.no_tray:
         window_mode(args.org_directories)
