@@ -21,13 +21,17 @@ import functools
 import glob
 import os.path
 import re
+import sys
+import socket
 from collections import defaultdict
 from os import getenv
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GLib
 
+WM_CLASS = "TrayCalendar"
+TOGGLE_INSTRUCTION = "TC_DIE"
 
 DEFAULT_ORG_DIRECTORY = os.path.join(getenv('HOME'), "org")
 ORG_GLOB = '*.org'
@@ -87,13 +91,15 @@ def scan_org_for_events(org_directories):
 
 class CalendarWindow(object):
 
-    def __init__(self, org_directories):
+    def __init__(self, org_directories, toggle=False, fixed_pos=False, pos=None):
+        if (toggle):
+            self.get_lock()
+
         self.window = Gtk.Window()
-        self.window.set_wmclass("traycalendar", "TrayCalendar")
+        self.window.set_wmclass("traycalendar", WM_CLASS)
 
         self.window.set_resizable(False)
         self.window.set_decorated(False)
-        self.window.set_gravity(Gdk.Gravity.STATIC)
 
         window_width = 300
 
@@ -137,11 +143,52 @@ class CalendarWindow(object):
         # get_pointer is deprecated but using Gdk.Device.get_position
         # is not viable here: we have no access to the pointing device.
         screen, x, y, mask = rootwin.get_pointer()
-        x -= window_width
-        # Show the window right beside the cursor.
-        self.window.move(x,y)
+
+        if fixed_pos:
+            self.position_fixed(pos, window_width, x, y)
+        else:
+            self.window.set_gravity(Gdk.Gravity.STATIC)
+            x -= window_width
+            # Show the window right beside the cursor.
+            self.window.move(x,y)
 
         self.window.show_all()
+
+    def position_fixed(self, pos, window_width, x, y):
+        if pos[1] >= 0:
+            self.window.set_gravity(Gdk.Gravity.NORTH_EAST)
+            # Gdk.Screen.get_width() is deprecated
+            # The preferred method appears to be as follows
+            screen_width = self.window.get_screen().get_display().get_monitor_at_point(x, y).get_geometry().width
+            self.window.move(screen_width - window_width - pos[1], pos[0])
+        else:
+            self.window.set_gravity(Gdk.Gravity.NORTH_WEST)
+            self.window.move(pos[2], pos[0])
+
+    def get_lock(self):
+        self._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+        try:
+            # Bind Socket to fixed adress
+            self._lock_socket.bind('\0' + WM_CLASS)
+            # Attach a listener to glib's event loop
+            GLib.io_add_watch(GLib.IOChannel(self._lock_socket.fileno()), 0, GLib.IOCondition.IN, self.toggle_listener, self._lock_socket)
+        except socket.error:
+            # Since the adress was already taken, connect to it and send the toggle-signal
+            self._lock_socket.connect('\0' + WM_CLASS)
+            self._lock_socket.send(TOGGLE_INSTRUCTION.encode())
+            sys.exit()
+
+    def toggle_listener(self, io, cond, socket):
+        # Listen for data
+        connection = socket.recvfrom(6)
+        instruction = connection[0].decode()
+        # Quit the app upon receiving the toggle-signal
+        if (TOGGLE_INSTRUCTION == instruction):
+            Gtk.main_quit()
+        return True
+
+
 
     def mark_calendar_events(self, calendar):
         """Update the days with calendar events list for the selected month."""
@@ -176,8 +223,8 @@ def tray_mode(org_directories):
     statusicon.connect('popup-menu', on_right_click)
     Gtk.main()
 
-def window_mode(org_directories):
-    window = CalendarWindow(org_directories)
+def window_mode(org_directories, toggle, fixed_pos, pos):
+    window = CalendarWindow(org_directories, toggle, fixed_pos, pos)
     window.window.connect('destroy', Gtk.main_quit)
     Gtk.main()
 
@@ -190,6 +237,27 @@ def main(argv=None):
         action='store_true',
     )
     parser.add_argument(
+        "--toggle",
+        help="When started with this argument, the will quit if another process is started with --toggle",
+        action='store_true',
+    )
+    parser.add_argument("--top", "-t",
+            type=int,
+            help="The distance from the top of the screen (Enables absolute positioning).",
+            dest='d_top',
+            action='store')
+    parser.add_argument("--left", "-l",
+            type=int,
+            help="The distance from the left of the screen (Enables absolute positioning).",
+            dest='d_left',
+            action='store')
+    parser.add_argument("--right", "-r",
+            type=int,
+            help="The distance from the right of the screen (Enables absolute positioning).",
+            dest='d_right',
+            action='store')
+
+    parser.add_argument(
         "--org-directory", "-d",
         help="Directories to search for *.org; default: ~/org/.",
         action='append',
@@ -200,8 +268,17 @@ def main(argv=None):
     if not args.org_directories:
         args.org_directories = [DEFAULT_ORG_DIRECTORY]
 
+    fixed_pos = not (args.d_top is None and args.d_right is None and args.d_left is None) 
+    if args.d_top is None:
+        args.d_top = 0
+    if args.d_left is None:
+        args.d_left = 0
+    if args.d_right is None:
+        args.d_right = -1
+    pos = (args.d_top, args.d_right, args.d_left)
+
     if args.no_tray:
-        window_mode(args.org_directories)
+        window_mode(args.org_directories, args.toggle, fixed_pos, pos)
     else:
         tray_mode(args.org_directories)
 

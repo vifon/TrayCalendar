@@ -25,7 +25,14 @@ className =? "TrayCalendar" --> doIgnore
 Suggested configuration for `xmobar` as the clock:
 
 ```
-<action=`traycalendar --no-tray &> /dev/null`><action=`traycalendar &> /dev/null` button=3>%date%</action></action>
+<action=`traycalendar --no-tray --toggle &> /dev/null`>%date%</action>
+```
+You can also add `-t <distance>` and `-l <distance>` or `-r <distance>` to enable fixed positioning,
+where `<distance>` is the distance in pixels from the corresponding side of the screen.
+
+For example: put the window at the right edge of the screen, 30px from the top
+```shell
+$ traycalendar --no-tray -t 30 -r 0
 ```
 
 DEPENDENCIES
