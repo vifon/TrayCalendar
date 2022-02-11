@@ -268,7 +268,7 @@ def main(argv=None):
     if not args.org_directories:
         args.org_directories = [DEFAULT_ORG_DIRECTORY]
 
-    fixed_pos = not (args.d_top is None and args.d_right is None and args.d_left is None) 
+    fixed_pos = not (args.d_top is None and args.d_right is None and args.d_left is None)
     if args.d_top is None:
         args.d_top = 0
     if args.d_left is None:
