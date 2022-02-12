@@ -92,7 +92,7 @@ def scan_org_for_events(org_directories):
 class CalendarWindow(object):
 
     def __init__(self, org_directories, toggle=False, fixed_pos=False, pos=None):
-        if (toggle):
+        if toggle:
             self.get_lock()
 
         self.window = Gtk.Window()
@@ -169,26 +169,23 @@ class CalendarWindow(object):
         self._lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 
         try:
-            # Bind Socket to fixed adress
+            # Bind socket to an abstract socket address.
             self._lock_socket.bind('\0' + WM_CLASS)
-            # Attach a listener to glib's event loop
+            # Attach a listener to glib's event loop.
             GLib.io_add_watch(GLib.IOChannel(self._lock_socket.fileno()), 0, GLib.IOCondition.IN, self.toggle_listener, self._lock_socket)
         except socket.error:
-            # Since the adress was already taken, connect to it and send the toggle-signal
+            # Since the address was already taken, connect to it and send the toggle-signal.
             self._lock_socket.connect('\0' + WM_CLASS)
             self._lock_socket.send(TOGGLE_INSTRUCTION.encode())
             sys.exit()
 
     def toggle_listener(self, io, cond, socket):
-        # Listen for data
-        connection = socket.recvfrom(6)
+        connection = socket.recvfrom(len(TOGGLE_INSTRUCTION))
         instruction = connection[0].decode()
-        # Quit the app upon receiving the toggle-signal
-        if (TOGGLE_INSTRUCTION == instruction):
+        # Quit the app upon receiving the toggle-signal.
+        if TOGGLE_INSTRUCTION == instruction:
             Gtk.main_quit()
         return True
-
-
 
     def mark_calendar_events(self, calendar):
         """Update the days with calendar events list for the selected month."""
