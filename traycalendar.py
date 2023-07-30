@@ -149,6 +149,7 @@ class CalendarWindow(object):
         else:
             self.window.set_gravity(Gdk.Gravity.STATIC)
             x -= window_width
+            y += 10
             # Show the window right beside the cursor.
             self.window.move(x,y)
 
